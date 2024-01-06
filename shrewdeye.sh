@@ -60,6 +60,7 @@ show_help() {
     echo "  -l, --list      Specify a list of domain1,domain2 ..."
     echo "  -f, --file      Specify a text file containing a list of domains to process"
     echo "  -h, --help      Show this help message and exit"
+    echo "  - Notes: You can run all options together"
     exit 0
 }
 
@@ -114,7 +115,6 @@ if [ -n "$domain_list" ]; then
         fi
         echo $domain
         process_domain "$domain" "${output}_$domain"
-        shift
     done
 fi
 
