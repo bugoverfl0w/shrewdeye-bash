@@ -32,84 +32,65 @@ process_domain() {
     timestamp=$(date +"%Y%m%d%H%M%S")  # Get current date and time in the format YYYYMMDDHHMMSS
     failed_domains_count=0
 
-    for domain in "$@"; do
-        api_url="https://shrewdeye.app/domains/${domain}.txt"
-        response=$(curl -s "$api_url")
+    api_url="https://shrewdeye.app/domains/${domain}.txt"
+    response=$(curl -s "$api_url")
 
-        if [ $? -eq 0 ]; then
-            output_file="${domain}_${timestamp}_output.txt"
-            echo "$response" > "$output_file"
-            echo "Data for $domain saved to $output_file"
-        else
-            echo "Error: Unable to fetch data for $domain from the API. Please check the domain name and try again."
-            failed_domains_count=$((failed_domains_count + 1))
-            failed_domains_output="${domain}_failed_${timestamp}.txt"
-            echo "$domain" >> "$failed_domains_output"
-        fi
-    done
+    if [ $? -eq 0 ]; then
+        output_file="${domain}_${timestamp}_output.txt"
+        [ -n "$2" ] && output_file=$2
+        echo "$response" > "$output_file"
+        echo "Data for $domain saved to $output_file"
+    else
+        echo "Error: Unable to fetch data for $domain from the API. Please check the domain name and try again."
+        failed_domains_count=$((failed_domains_count + 1))
+        failed_domains_output="${domain}_failed_${timestamp}.txt"
+        echo "$domain" >> "$failed_domains_output"
+    fi
 
     if [ "$failed_domains_count" -gt 1 ]; then
         echo "Multiple domains failed. List of failed domains saved to ${failed_domains_output}"
     fi
 }
 
-# Main Script
-display_banner
-
-# Check if there are no command-line arguments, and display help menu
-if [ $# -eq 0 ]; then
+show_help() {
     echo "Usage: shrewdeye.sh [OPTIONS]"
     echo "Options:"
     echo "  -d, --domain    Specify a single domain to process"
-    echo "  -l, --list      Specify a list of space seperated domains to process"
+    echo "  -o, --output    Specify a file for writing output, this is optional option"
+    echo "  -l, --list      Specify a list of domain1,domain2 ..."
     echo "  -f, --file      Specify a text file containing a list of domains to process"
     echo "  -h, --help      Show this help message and exit"
     exit 0
-fi
+}
+
+# Main Script
+display_banner
+output=""
+domain_list=""
+file_path=""
+domain_name=""
 
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
+        -o|--output)
+            output="$2"
+            shift 2
+            ;;
         -d|--domain)
             domain_name="$2"
-            process_domain "$domain_name"
             shift 2
             ;;
         -l|--list)
-            shift
-            # Combine space-separated arguments into a single string
-            domain_list="$@"
-            # Use a while loop to iterate over space-separated domains
-            for domain in $domain_list; do
-                # Check if the argument starts with '-' (indicating a new option)
-                if [[ $domain == -* ]]; then
-                    break
-                fi
-                process_domain "$domain"
-                shift
-            done
+            domain_list="$2" 
+            shift 2
             ;;
         -f|--file)
             file_path="$2"
-            if [ -f "$file_path" ]; then
-                # Read domains from the file and process each one
-                while IFS= read -r domain || [ -n "$domain" ]; do
-                    process_domain "$domain"
-                done < "$file_path"
-            else
-                echo "Error: File $file_path not found."
-                exit 1
-            fi
             shift 2
             ;;
         -h|--help)
-            echo "Usage: shrewdeye.sh [OPTIONS]"
-            echo "Options:"
-            echo "  -d, --domain    Specify a single domain to process"
-            echo "  -l, --list      Specify a space-separated list of domains to process"
-            echo "  -f, --file      Specify a file containing a list of domains to process (One per line)"
-            echo "  -h, --help      Show this help message and exit"
-            exit 0
+            show_help
             ;;
         *)
             echo "Error: Invalid option: $key. Use -h for help."
@@ -117,5 +98,31 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+set -- "${POSITIONAL[@]}"
+
+if [ -n "$domain_name" ]; then
+    process_domain "$domain_name" "$output"
+fi
+
+if [ -n "$domain_list" ]; then
+    # Use a while loop to iterate over space-separated domains
+    for domain in $(echo $domain_list | tr "," "\n"); do
+        # Check if the argument starts with '-' (indicating a new option)
+        if [[ $domain == -* ]]; then
+            break
+        fi
+        echo $domain
+        process_domain "$domain" "${output}_$domain"
+        shift
+    done
+fi
+
+if [ -f "$file_path" ]; then
+    # Read domains from the file and process each one
+    while IFS= read -r domain || [ -n "$domain" ]; do
+        process_domain "$domain" "$output"
+    done < "$file_path"
+fi
 
 echo "Thanks for using shrewdeye-bash"
