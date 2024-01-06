@@ -27,7 +27,7 @@ On a Linux host:
 Usage: shrewdeye.sh [OPTIONS]
 Options:
   -d, --domain    Specify a single domain to process
-  -l, --list      Specify a space-separated list of domains to process
+  -l, --list      Specify a list domains: domain1,domain2,domain3...
   -f, --file      Specify a text file containing a list of domains to process (One domain per line)
   -h, --help      Show this help message and exit
 ```
