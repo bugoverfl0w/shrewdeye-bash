@@ -29,6 +29,7 @@ display_banner() {
 }
 
 process_domain() {
+    domain="$1"
     timestamp=$(date +"%Y%m%d%H%M%S")  # Get current date and time in the format YYYYMMDDHHMMSS
     failed_domains_count=0
 
